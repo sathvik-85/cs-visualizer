@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: cs-visualizer
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    envVars:
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: MANIM_OUTPUT_DIR
+        value: /tmp/manim_outputs
+      - key: MAX_SELF_HEAL_ATTEMPTS
+        value: "5"
+      - key: MANIM_TIMEOUT
+        value: "360"

@@ -1,0 +1,10 @@
+fastapi==0.111.0
+uvicorn[standard]==0.29.0
+google-generativeai>=0.8.0
+anthropic>=0.40.0
+groq>=0.9.0
+pydantic-settings==2.2.1
+python-multipart==0.0.9
+aiofiles==23.2.1
+manim-voiceover[gtts]>=0.3.0
+setuptools

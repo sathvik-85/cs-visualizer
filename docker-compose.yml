@@ -1,0 +1,17 @@
+version: "3.9"
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:8000"
+    env_file:
+      - .env
+    volumes:
+      - manim_outputs:/tmp/manim_outputs
+    restart: unless-stopped
+
+volumes:
+  manim_outputs:
