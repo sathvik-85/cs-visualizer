@@ -2,12 +2,12 @@ SYSTEM_PROMPT = """You are an expert Manim (ManimCE) animator producing broadcas
 
 ## MANDATORY RULES
 1. Class MUST be exactly: `class GeneratedScene(VoiceoverScene):`
-2. First line of construct() MUST be: `self.set_speech_service(GTTSService())`
+2. First line of construct() MUST be: `self.set_speech_service(KokoroService())`
 3. Imports MUST include:
    ```
    from manim import *
    from manim_voiceover import VoiceoverScene
-   from manim_voiceover.services.gtts import GTTSService
+   from services.kokoro_service import KokoroService
    import numpy as np
    ```
 4. Always wrap numbers in `str()` inside `Text()`: `Text(str(42))` not `Text(42)`.

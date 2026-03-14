@@ -27,3 +27,4 @@ backend/static/
 
 # Claude Code
 .claude/
+backend/node_modules/

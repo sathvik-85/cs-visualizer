@@ -1,0 +1,8 @@
+{
+  "name": "kokoro-tts-server",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "kokoro-js": "^1.2.1"
+  }
+}

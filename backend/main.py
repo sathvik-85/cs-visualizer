@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import re
+import subprocess
 import uuid
 from pathlib import Path
 
@@ -182,7 +183,46 @@ async def serve_video(job_id: str, request: Request):
     )
 
 
-# ── Startup: verify Manim is installed ────────────────────────────────────────
+# ── Kokoro TTS server lifecycle ────────────────────────────────────────────────
+
+_kokoro_proc: subprocess.Popen | None = None
+
+def _start_kokoro_server() -> None:
+    global _kokoro_proc
+    backend_dir = Path(__file__).parent
+    server_script = backend_dir / "kokoro_server.mjs"
+    node_modules = backend_dir / "node_modules"
+
+    if not server_script.exists():
+        logger.warning("kokoro_server.mjs not found — Kokoro TTS unavailable")
+        return
+
+    if not node_modules.exists():
+        logger.info("Installing kokoro-js npm dependencies …")
+        subprocess.run(["npm", "install"], cwd=str(backend_dir), check=True)
+
+    _kokoro_proc = subprocess.Popen(
+        ["node", str(server_script)],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        env=os.environ.copy(),  # passes HF_TOKEN if set
+    )
+    logger.info("Kokoro TTS server started (pid=%d)", _kokoro_proc.pid)
+
+
+def _stop_kokoro_server() -> None:
+    global _kokoro_proc
+    if _kokoro_proc and _kokoro_proc.poll() is None:
+        _kokoro_proc.terminate()
+        try:
+            _kokoro_proc.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            _kokoro_proc.kill()
+        logger.info("Kokoro TTS server stopped")
+    _kokoro_proc = None
+
+
+# ── Startup: verify Manim is installed + launch Kokoro ─────────────────────────
 
 @app.on_event("startup")
 async def startup_check():
@@ -196,6 +236,14 @@ async def startup_check():
         logger.info("Manim OK — %s", stdout.decode().strip())
     else:
         logger.warning("Manim not found — rendering will fail!")
+
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, _start_kokoro_server)
+
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    _stop_kokoro_server()
 
 
 # ── Serve frontend (production single-server mode) ────────────────────────────

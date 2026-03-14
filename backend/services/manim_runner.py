@@ -7,6 +7,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional
 
+# Backend directory — added to PYTHONPATH so generated scenes can import KokoroService
+_BACKEND_DIR = str(Path(__file__).parent.parent)
+
 from config import settings
 from services.llm import generate_manim_code, repair_manim_code, generate_scene_graph
 from scene_graph.layout import compute_layout, LayoutError
@@ -54,12 +57,19 @@ async def run_manim(code: str, job_id: str) -> RenderResult:
         "GeneratedScene",
     ]
 
+    # Inherit environment and add backend to PYTHONPATH so generated scenes
+    # can do `from services.kokoro_service import KokoroService`
+    env = os.environ.copy()
+    existing_pp = env.get("PYTHONPATH", "")
+    env["PYTHONPATH"] = f"{_BACKEND_DIR}:{existing_pp}" if existing_pp else _BACKEND_DIR
+
     try:
         proc = await asyncio.create_subprocess_exec(
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
             cwd=str(job_dir),
+            env=env,
         )
         try:
             stdout, stderr = await asyncio.wait_for(

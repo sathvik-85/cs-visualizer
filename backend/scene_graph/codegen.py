@@ -3,7 +3,12 @@ Converts a SceneGraph + LayoutPlan into valid Manim Python code.
 All element positions come from the layout engine — the LLM never picks coordinates.
 """
 from __future__ import annotations
+import os as _os
 from typing import Optional
+
+# Absolute path to the backend/ directory — embedded in generated code so the
+# scene file can import KokoroService regardless of where Manim runs it from.
+_BACKEND_DIR = _os.path.dirname(_os.path.dirname(_os.path.abspath(__file__)))
 
 from scene_graph.schema import (
     SceneGraph, Step, AnyAction,
@@ -97,7 +102,7 @@ class ManimCodeGenerator:
         e.indent()
         e.emit("def construct(self):")
         e.indent()
-        e.emit("self.set_speech_service(GTTSService())")
+        e.emit("self.set_speech_service(KokoroService())")
         e.emit('self.camera.background_color = "#1a1a2e"')
         e.emit()
 
@@ -134,7 +139,7 @@ class ManimCodeGenerator:
         e = self._e
         e.emit("from manim import *")
         e.emit("from manim_voiceover import VoiceoverScene")
-        e.emit("from manim_voiceover.services.gtts import GTTSService")
+        e.emit("from services.kokoro_service import KokoroService")
         e.emit("import numpy as np")
         e.emit()
 
