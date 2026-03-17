@@ -11,6 +11,7 @@ import logging
 import os
 import shutil
 import subprocess
+import time
 import urllib.error
 import urllib.request
 import json as _json
@@ -49,7 +50,10 @@ class KokoroService(SpeechService):
         mp3_rel  = f"{slug}.mp3"  # relative to cache_dir (what manim-voiceover expects)
 
         if not os.path.exists(mp3_path):
-            # 1. Generate WAV via Kokoro Node.js server
+            # Ensure the directory exists before node tries to write there
+            os.makedirs(str(cache_dir), exist_ok=True)
+
+            # 1. Generate WAV via Kokoro Node.js server (retry while model loads)
             payload = _json.dumps({"text": text, "output_path": wav_path}).encode()
             req = urllib.request.Request(
                 f"{KOKORO_URL}/tts",
@@ -57,14 +61,22 @@ class KokoroService(SpeechService):
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            try:
-                with urllib.request.urlopen(req, timeout=60) as resp:
-                    result = _json.loads(resp.read())
-            except urllib.error.URLError as exc:
+            last_exc = None
+            for attempt in range(10):
+                try:
+                    with urllib.request.urlopen(req, timeout=60) as resp:
+                        result = _json.loads(resp.read())
+                    last_exc = None
+                    break
+                except urllib.error.URLError as exc:
+                    last_exc = exc
+                    logger.warning("Kokoro TTS not ready (attempt %d/10), retrying in 5s…", attempt + 1)
+                    time.sleep(5)
+            if last_exc is not None:
                 raise RuntimeError(
                     f"Kokoro TTS server unreachable at {KOKORO_URL}. "
                     "Make sure kokoro_server.mjs is running."
-                ) from exc
+                ) from last_exc
 
             if "error" in result:
                 raise RuntimeError(f"Kokoro TTS error: {result['error']}")
