@@ -12,6 +12,7 @@
 
 import http from "http";
 import fs from "fs";
+import path from "path";
 import { KokoroTTS } from "kokoro-js";
 
 const PORT = process.env.KOKORO_PORT || 8001;
@@ -86,7 +87,8 @@ const server = http.createServer(async (req, res) => {
 
     try {
       const audio = await tts.generate(text, { voice: VOICE });
-      audio.save(output_path);
+      fs.mkdirSync(path.dirname(output_path), { recursive: true });
+      await audio.save(output_path);
       const duration = audio.audio.length / audio.sampling_rate;
       return send(res, 200, { duration });
     } catch (err) {

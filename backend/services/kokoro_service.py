@@ -51,7 +51,7 @@ class KokoroService(SpeechService):
 
         if not os.path.exists(mp3_path):
             # Ensure the directory exists before node tries to write there
-            os.makedirs(str(cache_dir), exist_ok=True)
+            os.makedirs(os.path.dirname(wav_path), exist_ok=True)
 
             # 1. Generate WAV via Kokoro Node.js server (retry while model loads)
             payload = _json.dumps({"text": text, "output_path": wav_path}).encode()
