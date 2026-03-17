@@ -201,10 +201,11 @@ def _start_kokoro_server() -> None:
         logger.info("Installing kokoro-js npm dependencies …")
         subprocess.run(["npm", "install"], cwd=str(backend_dir), check=True)
 
+    _kokoro_log = open("/tmp/kokoro.log", "w")
     _kokoro_proc = subprocess.Popen(
         ["node", str(server_script)],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stdout=_kokoro_log,
+        stderr=_kokoro_log,
         env=os.environ.copy(),  # passes HF_TOKEN if set
     )
     logger.info("Kokoro TTS server started (pid=%d)", _kokoro_proc.pid)
