@@ -203,8 +203,8 @@ def _start_kokoro_server() -> None:
 
     _kokoro_proc = subprocess.Popen(
         ["node", str(server_script)],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
         env=os.environ.copy(),  # passes HF_TOKEN if set
     )
     logger.info("Kokoro TTS server started (pid=%d)", _kokoro_proc.pid)

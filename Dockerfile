@@ -14,8 +14,11 @@ FROM manimcommunity/manim:v0.18.1
 
 USER root
 
-# Install sox (required by manim-voiceover for audio processing)
-RUN apt-get update && apt-get install -y --no-install-recommends sox && rm -rf /var/lib/apt/lists/*
+# Install sox + libsox-fmt-mp3 (manim-voiceover) + Node.js (Kokoro TTS)
+RUN apt-get update && apt-get install -y --no-install-recommends sox libsox-fmt-mp3 curl && \
+    curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && \
+    apt-get install -y --no-install-recommends nodejs && \
+    rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app/backend
 
@@ -25,6 +28,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy backend source
 COPY backend/ ./
+
+# Pre-install Kokoro TTS npm dependencies
+RUN if [ -f package.json ]; then npm install; fi
 
 # Copy built frontend into backend/static (served by FastAPI)
 COPY --from=frontend-build /app/frontend/dist ./static
