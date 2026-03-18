@@ -143,6 +143,14 @@ FATAL_PATTERNS = [
     "ImportError",
     "cannot import name",
     "plugin_manager",
+    # TTS infrastructure — code regeneration can't fix these
+    "Kokoro TTS server unreachable",
+    "Kokoro TTS error",
+    # Manim version mismatch — environment issue, not a code bug
+    "total run_time of 0",
+    # System-level failures
+    "CalledProcessError",
+    "no space left on device",
 ]
 
 def _is_fatal(stderr: str) -> bool:
