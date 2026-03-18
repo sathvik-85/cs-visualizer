@@ -64,11 +64,19 @@ class KokoroService(SpeechService):
             last_exc = None
             for attempt in range(10):
                 try:
-                    with urllib.request.urlopen(req, timeout=60) as resp:
+                    # Long timeout: Kokoro inference on CPU can be slow
+                    with urllib.request.urlopen(req, timeout=300) as resp:
                         result = _json.loads(resp.read())
                     last_exc = None
                     break
+                except TimeoutError as exc:
+                    # Inference timed out — don't retry, fail immediately
+                    raise RuntimeError(
+                        f"Kokoro TTS timed out at {KOKORO_URL}. "
+                        "The server is too slow to respond."
+                    ) from exc
                 except urllib.error.URLError as exc:
+                    # Connection refused or 503 (model still loading) — retry
                     last_exc = exc
                     logger.warning("Kokoro TTS not ready (attempt %d/10), retrying in 5s…", attempt + 1)
                     time.sleep(5)

@@ -146,6 +146,7 @@ FATAL_PATTERNS = [
     # TTS infrastructure — code regeneration can't fix these
     "Kokoro TTS server unreachable",
     "Kokoro TTS error",
+    "Kokoro TTS timed out",
     # Manim version mismatch — environment issue, not a code bug
     "total run_time of 0",
     # System-level failures
