@@ -176,6 +176,10 @@ async def render_with_healing(
         await sse_queue.put({"step": "repair", "attempt": 1, "error": syntax_err})
         code = await repair_manim_code(topic, code, f"SyntaxError: {syntax_err}", 1,
                                        provider=provider, model=model, api_key=api_key, sse_queue=sse_queue)
+        valid, syntax_err = validate_syntax(code)
+        if not valid:
+            await sse_queue.put({"step": "error", "error": f"Syntax error persists after repair: {syntax_err}"})
+            raise RuntimeError(f"Syntax error not fixed: {syntax_err}")
 
     for attempt in range(1, settings.max_self_heal_attempts + 1):
         await sse_queue.put({"step": "rendering", "attempt": attempt})
@@ -204,6 +208,10 @@ async def render_with_healing(
             })
             code = await repair_manim_code(topic, code, result.stderr, attempt,
                                            provider=provider, model=model, api_key=api_key, sse_queue=sse_queue)
+            valid, syntax_err = validate_syntax(code)
+            if not valid:
+                await sse_queue.put({"step": "error", "error": f"Repair introduced syntax error: {syntax_err}"})
+                raise RuntimeError(f"Repair introduced syntax error: {syntax_err}")
         else:
             await sse_queue.put({
                 "step": "error",
