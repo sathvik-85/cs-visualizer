@@ -152,6 +152,9 @@ FATAL_PATTERNS = [
     # System-level failures
     "CalledProcessError",
     "no space left on device",
+    # LaTeX not installed — MathTex/Tex used in generated code
+    "No such file or directory: 'latex'",
+    "No such file or directory: 'xelatex'",
 ]
 
 def _is_fatal(stderr: str) -> bool:
