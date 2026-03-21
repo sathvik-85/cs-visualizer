@@ -16,6 +16,7 @@ SYSTEM_PROMPT = """You are an expert Manim (ManimCE) animator producing broadcas
 7. Output ONLY valid Python code, no explanations.
 8. All text strings must be ASCII only — no unicode arrows or special symbols inside Text().
 9. Every animation step MUST be wrapped in `with self.voiceover("..."):` — no animations outside voiceover blocks (except the final wait).
+10. Keep ALL code inside `construct()` — do NOT define helper methods on the class. Every line of animation logic must be directly in construct().
 
 ## COLOR PALETTE
 ```python
