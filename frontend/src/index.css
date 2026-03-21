@@ -36,6 +36,50 @@ html, body, #root {
   gap: 2.5rem;
 }
 
+/* ── Mode Tabs ────────────────────────────────────────────────────────────── */
+.mode-tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+.mode-tab {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 0.4rem 1rem;
+  transition: all 0.15s;
+}
+.mode-tab.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.mode-tab:hover:not(.active) { border-color: var(--accent); color: var(--text); }
+
+/* ── Code Mode ────────────────────────────────────────────────────────────── */
+.code-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+.code-editor {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: "Fira Code", "Cascadia Code", monospace;
+  font-size: 0.82rem;
+  line-height: 1.6;
+  min-height: 280px;
+  padding: 1rem;
+  resize: vertical;
+  width: 100%;
+}
+.code-editor:focus { border-color: var(--accent); outline: none; }
+
 /* ── Model Config ─────────────────────────────────────────────────────────── */
 .model-config {
   background: var(--bg-raised);

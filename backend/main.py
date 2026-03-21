@@ -17,7 +17,7 @@ from pydantic import BaseModel
 from config import settings
 from services.email_sender import send_completion_email
 from services.job_store import create_job, get_job
-from services.manim_runner import render_with_healing, render_with_healing_v2
+from services.manim_runner import render_with_healing, render_with_healing_v2, run_manim
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -35,7 +35,8 @@ app.add_middleware(
 # ── Request/Response models ────────────────────────────────────────────────────
 
 class GenerateRequest(BaseModel):
-    topic: str
+    topic: str | None = None
+    code: str | None = None          # code mode — skip LLM entirely
     notify_email: str | None = None
 
 
@@ -46,13 +47,32 @@ class GenerateResponse(BaseModel):
 # ── Background task ────────────────────────────────────────────────────────────
 
 async def run_pipeline(
-    job_id: str, topic: str, provider: str, model: str, api_key: str,
+    job_id: str, topic: str | None, provider: str, model: str, api_key: str,
     notify_email: str | None = None,
+    code: str | None = None,
 ) -> None:
     job = get_job(job_id)
     if not job:
         return
     try:
+        if code:
+            # Code mode — skip LLM entirely, render user-supplied code directly
+            await job.sse_queue.put({"step": "rendering", "attempt": 1})
+            result = await run_manim(code, job_id)
+            if result.success:
+                await job.sse_queue.put({
+                    "step": "complete",
+                    "video_url": f"/api/video/{job_id}",
+                    "code": code,
+                })
+                job.video_path = result.video_path
+                job.code = code
+                job.status = "complete"
+            else:
+                await job.sse_queue.put({"step": "error", "error": result.stderr[-800:]})
+                job.status = "error"
+            return
+
         pipeline = render_with_healing_v2 if settings.use_layout_engine else render_with_healing
         video_path, code = await pipeline(
             topic, job_id, job.sse_queue,
@@ -85,8 +105,8 @@ async def generate(
     x_model: str | None = Header(default=None),
     x_provider: str | None = Header(default=None),
 ):
-    if not req.topic or len(req.topic.strip()) < 3:
-        raise HTTPException(status_code=400, detail="Topic too short")
+    if not req.code and (not req.topic or len(req.topic.strip()) < 3):
+        raise HTTPException(status_code=400, detail="Provide a topic or paste Manim code")
 
     provider = x_provider or "Anthropic"
     model = x_model or "claude-sonnet-4-6"
@@ -95,8 +115,8 @@ async def generate(
     job_id = str(uuid.uuid4())
     create_job(job_id)
     background_tasks.add_task(
-        run_pipeline, job_id, req.topic.strip(), provider, model, api_key,
-        req.notify_email,
+        run_pipeline, job_id, req.topic.strip() if req.topic else None,
+        provider, model, api_key, req.notify_email, req.code,
     )
     return GenerateResponse(job_id=job_id)
 

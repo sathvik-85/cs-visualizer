@@ -16,7 +16,20 @@ const MODELS = [
 const STORAGE_MODEL = "selected_model";
 const STORAGE_KEY   = (modelId: string) => `api_key_${modelId}`;
 
+const CODE_TEMPLATE = `from manim import *
+from manim_voiceover import VoiceoverScene
+from manim_voiceover.services.gtts import GTTSService
+
+class GeneratedScene(VoiceoverScene):
+    def construct(self):
+        self.set_speech_service(GTTSService())
+        self.camera.background_color = "#1a1a2e"
+        # Your animation code here
+`;
+
 export function Generator() {
+  const [mode, setMode] = useState<"topic" | "code">("topic");
+  const [userCode, setUserCode] = useState(CODE_TEMPLATE);
   const [jobId, setJobId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [fetchError, setFetchError] = useState<string | null>(null);
@@ -62,6 +75,29 @@ export function Generator() {
     else localStorage.removeItem("notify_email");
   };
 
+  const handleCodeSubmit = async () => {
+    if (!userCode.trim()) return;
+    setBusy(true);
+    setFetchError(null);
+    setJobId(null);
+    try {
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: userCode }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `Server error ${res.status}`);
+      }
+      const data = await res.json();
+      setJobId(data.job_id);
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : String(err));
+      setBusy(false);
+    }
+  };
+
   const handleSubmit = async (topic: string) => {
     setBusy(true);
     setFetchError(null);
@@ -104,57 +140,93 @@ export function Generator() {
         </p>
       </header>
 
-      <div className="model-config">
-        <div className="model-select-row">
-          <label className="config-label">Model</label>
-          <select
-            className="model-select"
-            value={selectedModelId}
-            onChange={e => setSelectedModelId(e.target.value)}
-          >
-            {MODELS.map(m => (
-              <option key={m.id} value={m.id}>
-                {m.label} — {m.provider}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="api-key-row">
-          <label className="config-label">{model.provider} Key</label>
-          <input
-            type={showKey ? "text" : "password"}
-            className="api-key-input"
-            placeholder={model.keyPlaceholder}
-            value={apiKey}
-            onChange={e => setKeys(k => ({ ...k, [model.id]: e.target.value }))}
-            spellCheck={false}
-          />
-          <button className="toggle-key-btn" onClick={() => setShowKey(v => !v)}>
-            {showKey ? "Hide" : "Show"}
-          </button>
-          <button
-            className={`save-key-btn${keySaved ? " saved" : ""}`}
-            onClick={handleSaveKey}
-          >
-            {keySaved ? "Saved ✓" : "Save"}
-          </button>
-        </div>
-
-        <div className="email-row">
-          <label className="config-label">Notify Email</label>
-          <input
-            type="email"
-            className="api-key-input"
-            placeholder="you@example.com (optional — get emailed when done)"
-            value={email}
-            onChange={e => handleEmailChange(e.target.value)}
-            spellCheck={false}
-          />
-        </div>
+      <div className="mode-tabs">
+        <button
+          className={`mode-tab${mode === "topic" ? " active" : ""}`}
+          onClick={() => setMode("topic")}
+        >
+          Topic
+        </button>
+        <button
+          className={`mode-tab${mode === "code" ? " active" : ""}`}
+          onClick={() => setMode("code")}
+        >
+          Code
+        </button>
       </div>
 
-      <PromptInput onSubmit={handleSubmit} disabled={busy} />
+      {mode === "topic" && (
+        <div className="model-config">
+          <div className="model-select-row">
+            <label className="config-label">Model</label>
+            <select
+              className="model-select"
+              value={selectedModelId}
+              onChange={e => setSelectedModelId(e.target.value)}
+            >
+              {MODELS.map(m => (
+                <option key={m.id} value={m.id}>
+                  {m.label} — {m.provider}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="api-key-row">
+            <label className="config-label">{model.provider} Key</label>
+            <input
+              type={showKey ? "text" : "password"}
+              className="api-key-input"
+              placeholder={model.keyPlaceholder}
+              value={apiKey}
+              onChange={e => setKeys(k => ({ ...k, [model.id]: e.target.value }))}
+              spellCheck={false}
+            />
+            <button className="toggle-key-btn" onClick={() => setShowKey(v => !v)}>
+              {showKey ? "Hide" : "Show"}
+            </button>
+            <button
+              className={`save-key-btn${keySaved ? " saved" : ""}`}
+              onClick={handleSaveKey}
+            >
+              {keySaved ? "Saved ✓" : "Save"}
+            </button>
+          </div>
+
+          <div className="email-row">
+            <label className="config-label">Notify Email</label>
+            <input
+              type="email"
+              className="api-key-input"
+              placeholder="you@example.com (optional — get emailed when done)"
+              value={email}
+              onChange={e => handleEmailChange(e.target.value)}
+              spellCheck={false}
+            />
+          </div>
+        </div>
+      )}
+
+      {mode === "topic" && <PromptInput onSubmit={handleSubmit} disabled={busy} />}
+
+      {mode === "code" && (
+        <div className="code-mode">
+          <textarea
+            className="code-editor"
+            value={userCode}
+            onChange={e => setUserCode(e.target.value)}
+            spellCheck={false}
+            disabled={busy}
+          />
+          <button
+            className="generate-btn"
+            onClick={handleCodeSubmit}
+            disabled={busy || !userCode.trim()}
+          >
+            {busy ? "Rendering…" : "Run Code"}
+          </button>
+        </div>
+      )}
 
       {fetchError && (
         <div className="fetch-error">Generation failed — {fetchError}</div>
